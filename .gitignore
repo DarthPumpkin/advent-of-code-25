@@ -1,0 +1,7 @@
+.zig-cache/
+zig-out/
+/*/input.txt
+*/part1
+*/part1.o
+*/part2
+*/part2.o
