@@ -33,18 +33,18 @@ $
 //   approx& (log_10 n) / 2 med 10^((log_10 n)/2) \
 //   approx& sqrt(n) med (log_10 n) / 2.
 // $
-We need to check the first $(log_10 n + 1) / 2$ prefixes.
+We need to check the first $(|n|) / 2 = (log_10 n + 1) / 2$ prefixes.
 Assuming a check is $cal(O)(log n)$, the total complexity is thus $cal(O)((u - ell) log^2 u)$.
 // $cal(O)((u - ell) sqrt(u) log^2 u)$.
 
 = Method 2: Enumerating prefixes
 The main disadvantage with Method 1 is the dependence on $u - ell$.
-There are only $floor(u slash 10^(ceil((|u|) slash 2))) <= sqrt(u)$ possible prefixes.
-Therefore, intuitively, if $u - ell > sqrt(u)$, we should be able to improve by only checking IDs that are indeed repetitions of prefixes.
-
+There are only $floor(u slash 10^(ceil((|u|) slash 2))) <= sqrt(u)$ possible prefixes for numbers up to $u$ (see Appendix).
 For any given prefix, we can check in $cal(O)(log^2 u)$ time if any repetition falls within the range $[l, u]$.
-However, prefix repetitions are not unique, e.g., $"a"^4 = "aa"^2 = "aaaa"$, so we need to avoid counting duplicates.
-The most straight-forward method is to keep a set of seen invalid IDs and to simply skip any IDs if we have come across them before.
+Therefore, intuitively, if $u - ell > sqrt(u)$, we should be able to improve if we directly generate invalid IDs by enumerating prefixes.
+
+The only challenge is that prefix repetitions are not unique, e.g., $"a"^4 = "aa"^2 = "aaaa"$, so we need to avoid counting duplicates.
+The most straight-forward method is to keep a set of seen invalid IDs and to simply skip any IDs if we have come across them before, but this is rather wasteful.
 A more space-efficient method is to discard prefixes that are themselves repetitions, using the approach from Method 1.
 Finally, it is also possible to generate primitive prefixes directly, e.g., via the Fredricksen-Maiorana (FKM) algorithm, but this is probably outside the scope of Advent of Code.
 
@@ -62,8 +62,9 @@ which has complexity $cal(O)(sqrt(u) log^2 u)$.
 #pagebreak()
 
 = Appendix
+#label("sec:appendix")
 == Square-root upper bound
-For a number $n$ with digit degree 2, i.e., $"digits"(n) = "digits"(s)^2$, we have
+For a number $n$ with digit degree 2, i.e., $"digits"(n) = "digits"(s)^2$ for some $s$, we have
 $
   n
   &= s (10^(|s|) + 1) \
