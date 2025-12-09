@@ -10,17 +10,6 @@ const max_size = math.maxInt(usize);
 const stdout_buffersize = 1024;
 const max_ids_per_range = 64;
 
-// const precompute_periods = 100_000;
-// const periods: [precompute_periods]?Period = blk: {
-//     @setEvalBranchQuota(std.math.maxInt(u32));
-//     var periods_: [precompute_periods]?Period = undefined;
-//     periods_[0] = null;
-//     for (1..precompute_periods) |n| {
-//         periods_[n] = find_period(n);
-//     }
-//     break :blk periods_;
-// };
-
 fn solve(base_alloc: mem.Allocator, input_str: []u8) !Solution {
     // var arena = std.heap.ArenaAllocator.init(base_alloc);
     // defer arena.deinit();
@@ -32,7 +21,6 @@ fn solve(base_alloc: mem.Allocator, input_str: []u8) !Solution {
     while (lines.next()) |range_str| {
         const range = try RangeInclusive.parse(range_str);
         const solution = solve_single(range);
-        debugPrintLn("{}-{}\t {}", .{ range.lo, range.hi, solution });
         sum += solution;
     }
     return sum;
@@ -76,12 +64,6 @@ fn method2(range: RangeInclusive) Solution {
 }
 
 const Period = struct { prefix: u64, reps: u64 };
-
-// fn find_period_cached(n: u64) ?Period {
-//     if (n < precompute_periods)
-//         return periods[n];
-//     return find_period(n);
-// }
 
 fn find_period(n: u64) ?Period {
     const n_len = ndigits(n);
