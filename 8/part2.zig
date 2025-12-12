@@ -65,7 +65,6 @@ fn solve(n_boxes: comptime_int, input_str: []u8) !Solution {
             }
         }
     }
-    debugPrintLn("Circuits: {any}", .{circuits});
     @panic("Did not terminate");
 }
 
@@ -84,23 +83,6 @@ fn sqdiff(n: u64, m: u64) u64 {
 /// Does not use heap allocation.
 fn argmin_n(comptime n: usize, slice: []const u64) [n]usize {
     assert(slice.len >= n);
-    // var threshold = math.maxInt(u64);
-    // var n_smallest: [n]usize = undefined;
-    // for (slice, 0..n) |item, i| {
-    //     // if (i < n) {
-    //     n_smallest[i] = item;
-    //     threshold = @min(threshold, item);
-    // }
-    // for (slice, n..) |item, i| {
-    //     if (item <= threshold) {
-    //         const argmax = mem.indexOfMax(usize, n_smallest);
-    //         mem.l
-    //         n_smallest[argmax] = item;
-    //         threshold = mem.max(usize, n_smallest);
-    //     }
-    // }
-    // return n_smallest;
-
     // Approach: maintain a max-heap of the n smallest items
     var membuf: [@sizeOf([n]usize)]u8 = undefined;
     var fba = std.heap.FixedBufferAllocator.init(&membuf);
@@ -137,25 +119,19 @@ fn StrictlyLowerTriangularMatrix(n: comptime_int) type {
         }
 
         pub fn at(self: *@This(), row: usize, col: usize) *u64 {
-            const actual_row = @max(row, col);
-            const actual_col = @min(row, col);
-            assert(actual_row >= 1);
-            assert(actual_row > actual_col);
-            assert(actual_row < n);
-
-            const idx = (actual_row * (actual_row - 1)) / 2 + actual_col;
+            assert(row >= 1);
+            assert(row > col);
+            assert(row < n);
+            const idx = (row * (row - 1)) / 2 + col;
             return &self.data[idx];
         }
 
         pub fn unlinearize(linear: usize) struct { row: usize, col: usize } {
             assert(linear < numel);
-            const r = (math.sqrt(8 * linear + 1) + 1) / 2;
-            // const lf = @as(f64, @floatFromInt(linear));
-            // const r = @as(usize, @intFromFloat(@floor((std.math.sqrt(8.0 * lf + 1.0) - 1.0) / 2.0)));
-            // assert(r < n);
-            const base = (r * (r - 1)) / 2;
-            const c = linear - base;
-            return .{ .row = r, .col = c };
+            const row = (math.sqrt(8 * linear + 1) + 1) / 2;
+            const row_offset = (row * (row - 1)) / 2;
+            const col = linear - row_offset;
+            return .{ .row = row, .col = col };
         }
     };
 }
