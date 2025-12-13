@@ -7,12 +7,12 @@ const expect = std.testing.expect;
 const Solution = u64;
 const NodeID = [3]u8;
 const AdjacencyMap = std.AutoHashMap(NodeID, []const NodeID);
-const CacheEntry = struct {
-    node: NodeID,
+const CacheKey = struct {
+    from: NodeID,
     through_dac: bool,
     through_fft: bool,
 };
-const Cache = std.AutoHashMap(CacheEntry, Solution);
+const Cache = std.AutoHashMap(CacheKey, Solution);
 
 // Low-level I/O settings
 const max_size = math.maxInt(usize);
@@ -41,36 +41,47 @@ fn solve(base_alloc: mem.Allocator, input_str: []u8) !Solution {
     }
 
     var cache = Cache.init(al);
+    try cache.ensureTotalCapacity(@intCast(4 * adjacency_map.keyIterator().len));
     defer cache.deinit();
-    return n_paths("svr".*, true, true, &cache, adjacency_map);
+    try cache.put(.{ .from = "out".*, .through_dac = false, .through_fft = false }, 1);
+    try cache.put(.{ .from = "out".*, .through_dac = false, .through_fft = true }, 0);
+    try cache.put(.{ .from = "out".*, .through_dac = true, .through_fft = false }, 0);
+    try cache.put(.{ .from = "out".*, .through_dac = true, .through_fft = true }, 0);
+    return n_paths(.{ .from = "svr".*, .through_dac = true, .through_fft = true }, &cache, adjacency_map);
 }
 
-fn n_paths(from: NodeID, through_dac: bool, through_fft: bool, cache: *Cache, all_out_edges: AdjacencyMap) !Solution {
-    const cache_key: CacheEntry = .{ .node = from, .through_dac = through_dac, .through_fft = through_fft };
-    const cache_val = cache.get(cache_key);
-    if (cache_val != null) {
-        return cache_val.?;
+fn n_paths(key: CacheKey, cache: *Cache, all_out_edges: AdjacencyMap) !Solution {
+    assert(!mem.eql(u8, &key.from, "dac") or !key.through_dac);
+    assert(!mem.eql(u8, &key.from, "fft") or !key.through_fft);
+    if (cache.get(key)) |val| {
+        return val;
     }
-    if (mem.eql(u8, &from, "out")) {
-        if (!through_dac and !through_fft)
-            return 1;
-        return 0;
-    }
-    const children = all_out_edges.get(from) orelse &.{};
+    const children = all_out_edges.get(key.from) orelse &.{};
     var sum: Solution = 0;
     for (children) |child| {
+        var new_key: CacheKey = undefined;
         if (mem.eql(u8, &child, "dac")) {
-            if (through_dac) {
-                sum += try n_paths(child, false, through_fft, cache, all_out_edges);
-            }
+            new_key = .{
+                .from = child,
+                .through_dac = false,
+                .through_fft = key.through_fft,
+            };
         } else if (mem.eql(u8, &child, "fft")) {
-            if (through_fft)
-                sum += try n_paths(child, through_dac, false, cache, all_out_edges);
+            new_key = .{
+                .from = child,
+                .through_dac = key.through_dac,
+                .through_fft = false,
+            };
         } else {
-            sum += try n_paths(child, through_dac, through_fft, cache, all_out_edges);
+            new_key = .{
+                .from = child,
+                .through_dac = key.through_dac,
+                .through_fft = key.through_fft,
+            };
         }
+        sum += try n_paths(new_key, cache, all_out_edges);
     }
-    try cache.put(cache_key, sum);
+    try cache.put(key, sum);
     return sum;
 }
 
