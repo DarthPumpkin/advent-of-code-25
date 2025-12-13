@@ -6,7 +6,7 @@ const expect = std.testing.expect;
 
 const Solution = u64;
 const NodeID = [3]u8;
-const AdjacencyMap = std.AutoArrayHashMap(NodeID, []const NodeID);
+const AdjacencyMap = std.AutoHashMap(NodeID, []const NodeID);
 
 const max_size = math.maxInt(usize);
 const stdout_buffersize = 1024;
@@ -16,30 +16,26 @@ fn solve(base_alloc: mem.Allocator, input_str: []u8) !Solution {
     defer arena.deinit();
     const al = arena.allocator();
 
-    // var all_nodes = std.ArrayList(NodeID).initCapacity(al, input_str.len / 16);
-    var all_out_edges = AdjacencyMap.init(al);
-    var lines = std.mem.tokenizeScalar(u8, input_str, '\n');
+    var adjacency_map = AdjacencyMap.init(al);
+    var lines = mem.tokenizeScalar(u8, input_str, '\n');
     while (lines.next()) |line| {
-        var fromto = std.mem.tokenizeSequence(u8, line, ": ");
-        const from_slice = fromto.next().?;
-        assert(from_slice.len == 3);
-        const from = from_slice[0..3];
-        const to_str = fromto.next().?;
-        const n_edges = (to_str.len + 1) / 4;
+        var fromto = mem.tokenizeSequence(u8, line, ": ");
+        const from = fromto.next().?;
+        assert(from.len == 3);
+        const edges_str = fromto.next().?;
+        const n_edges = (edges_str.len + 1) / 4;
         var to = try al.alloc(NodeID, n_edges);
-        // var edges = std.mem.tokenizeScalar(u8, to_str, ' ');
         for (0..n_edges) |i| {
             const offset = 4 * i;
-            // @memcpy(&to[i], to_str[offset..][0..3]);
-            to[i] = to_str[offset..][0..3].*;
+            to[i] = edges_str[offset..][0..3].*;
         }
-        try all_out_edges.put(from.*, to);
+        try adjacency_map.put(from[0..3].*, to);
     }
 
-    return n_paths("you".*, &all_out_edges);
+    return n_paths("you".*, adjacency_map);
 }
 
-fn n_paths(from: NodeID, all_out_edges: *const AdjacencyMap) Solution {
+fn n_paths(from: NodeID, all_out_edges: AdjacencyMap) Solution {
     if (mem.eql(u8, &from, "out")) {
         return 1;
     }
