@@ -1,4 +1,5 @@
 const std = @import("std");
+const benchmark = @import("benchmark.zig");
 const math = std.math;
 const mem = std.mem;
 const assert = std.debug.assert;
@@ -10,7 +11,7 @@ const max_size = math.maxInt(usize);
 const stdout_buffersize = 1024;
 const max_ids_per_range = 64;
 
-fn solve(base_alloc: mem.Allocator, input_str: []u8) !Solution {
+fn solve(base_alloc: mem.Allocator, input_str: []const u8) !Solution {
     // var arena = std.heap.ArenaAllocator.init(base_alloc);
     // defer arena.deinit();
     // const arena_alloc = arena.allocator();
@@ -41,19 +42,51 @@ fn method1(range: RangeInclusive) Solution {
 }
 
 fn method2(range: RangeInclusive) Solution {
+    // const total_max_block_len = 5;
+    // const total_max_block = comptime (math.powi(usize, 10, total_max_block_len) catch unreachable) - 1;
+    // const Precomputed = struct {
+    //     primitive_prefixes: [total_max_block - 1]u64,
+    //     n: usize,
+    // };
+    // const precomputed: Precomputed = comptime blk: {
+    //     @setEvalBranchQuota(10_000_000);
+    //     var primitive_blocks: [total_max_block - 1]u64 = undefined;
+    //     var n_primitive_blocks: usize = 0;
+    //     for (0..total_max_block) |i| {
+    //         const prefix_ = i + 1;
+    //         if (find_period(prefix_) == null) {
+    //             primitive_blocks[n_primitive_blocks] = prefix_;
+    //             n_primitive_blocks += 1;
+    //         }
+    //     }
+    //     break :blk .{ .primitive_prefixes = primitive_blocks, .n = n_primitive_blocks };
+    // };
+    // _ = precomputed;
+
     var sum: Solution = 0;
     const l_len = ndigits(range.lo);
     const u_len = ndigits(range.hi);
-    const max_prefix_len = @divFloor(u_len, 2);
-    const max_prefix = math.powi(u64, 10, max_prefix_len) catch unreachable;
-    for (1..max_prefix + 1) |prefix_| {
-        if (find_period(prefix_) == null) {
-            const postfix_len = ndigits(prefix_);
-            const max_reps = @divFloor(u_len, postfix_len);
-            const l_min_reps = math.divCeil(u64, l_len, postfix_len) catch unreachable;
+    const max_block_len = @divFloor(u_len, 2);
+    const max_block = math.powi(u64, 10, max_block_len) catch unreachable;
+    for (1..max_block + 1) |block| {
+        // const block = precomputed.primitive_prefixes[i];
+        // const block = i + 1;
+        // if (block > max_block)
+        //     break;
+        const block_len = ndigits(block);
+        if (l_len == u_len) {
+            const l_prefix = prefix(range.lo, block_len);
+            const u_prefix = prefix(range.hi, block_len);
+            if (block < l_prefix or block > u_prefix) {
+                continue;
+            }
+        }
+        if (find_period(block) == null) {
+            const max_reps = @divFloor(u_len, block_len);
+            const l_min_reps = math.divCeil(u64, l_len, block_len) catch unreachable;
             const min_reps = @max(l_min_reps, 2);
             for (min_reps..max_reps + 1) |reps| {
-                const id = repeat(prefix_, reps);
+                const id = repeat(block, reps);
                 if (range.lo <= id and id <= range.hi) {
                     sum += id;
                 }
@@ -86,6 +119,7 @@ fn find_period(n: u64) ?Period {
 }
 
 fn ndigits(n: u64) u64 {
+    assert(n > 0);
     return math.log10_int(n) + 1;
 }
 
@@ -108,7 +142,7 @@ fn remove_postfix(n: u64, len: u64) u64 {
 }
 
 fn repeat(n: u64, times: u64) u64 {
-    const n_len = math.log10_int(n) + 1;
+    const n_len = ndigits(n);
     var total: u64 = n;
     for (1..times) |i| {
         const factor = math.powi(u64, 10, i * n_len) catch unreachable;
@@ -147,6 +181,15 @@ fn printLn(comptime fmt: []const u8, args: anytype) !void {
     try stdout.flush();
 }
 
+const SolveContext = struct {
+    base_allocator: mem.Allocator,
+    input_str: []const u8,
+};
+
+fn solve_timed(_: mem.Allocator, context: SolveContext, _: *std.time.Timer) !void {
+    std.mem.doNotOptimizeAway(solve(context.base_allocator, context.input_str));
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = gpa.allocator();
@@ -157,6 +200,7 @@ pub fn main() !void {
 
     const fileContent = try std.fs.cwd().readFileAlloc(alloc, "input.txt", max_size);
     defer alloc.free(fileContent);
+
     const solution = try solve(alloc, fileContent);
     try printLn("Input answer: {d}", .{solution});
 }
@@ -224,20 +268,13 @@ test "Benchmark" {
         debugPrintLn("Memory check: {any}", .{deinit_status});
     }
 
-    const tic = std.time.microTimestamp();
     const fileContent = try std.fs.cwd().readFileAlloc(alloc, "input.txt", max_size);
     defer alloc.free(fileContent);
 
-    const tac = std.time.microTimestamp();
-    defer {
-        const toc = std.time.microTimestamp();
-        printLn("readFile took {d}μs", .{tac - tic}) catch {
-            debugPrintLn("Failed to print to stdout", .{});
-        };
-        printLn("solve took {d}μs", .{toc - tac}) catch {
-            debugPrintLn("Failed to print to stdout", .{});
-        };
-    }
-
-    _ = try solve(alloc, fileContent);
+    const context = SolveContext{
+        .base_allocator = alloc,
+        .input_str = fileContent,
+    };
+    const result = try benchmark.runC(context, solve_timed);
+    result.print("solve");
 }
