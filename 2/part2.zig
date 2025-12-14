@@ -42,37 +42,12 @@ fn method1(range: RangeInclusive) Solution {
 }
 
 fn method2(range: RangeInclusive) Solution {
-    // const total_max_block_len = 5;
-    // const total_max_block = comptime (math.powi(usize, 10, total_max_block_len) catch unreachable) - 1;
-    // const Precomputed = struct {
-    //     primitive_prefixes: [total_max_block - 1]u64,
-    //     n: usize,
-    // };
-    // const precomputed: Precomputed = comptime blk: {
-    //     @setEvalBranchQuota(10_000_000);
-    //     var primitive_blocks: [total_max_block - 1]u64 = undefined;
-    //     var n_primitive_blocks: usize = 0;
-    //     for (0..total_max_block) |i| {
-    //         const prefix_ = i + 1;
-    //         if (find_period(prefix_) == null) {
-    //             primitive_blocks[n_primitive_blocks] = prefix_;
-    //             n_primitive_blocks += 1;
-    //         }
-    //     }
-    //     break :blk .{ .primitive_prefixes = primitive_blocks, .n = n_primitive_blocks };
-    // };
-    // _ = precomputed;
-
     var sum: Solution = 0;
     const l_len = ndigits(range.lo);
     const u_len = ndigits(range.hi);
     const max_block_len = @divFloor(u_len, 2);
     const max_block = math.powi(u64, 10, max_block_len) catch unreachable;
     for (1..max_block + 1) |block| {
-        // const block = precomputed.primitive_prefixes[i];
-        // const block = i + 1;
-        // if (block > max_block)
-        //     break;
         const block_len = ndigits(block);
         if (l_len == u_len) {
             const l_prefix = prefix(range.lo, block_len);
