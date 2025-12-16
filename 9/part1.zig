@@ -20,7 +20,6 @@ fn solve(base_alloc: mem.Allocator, input_str: []const u8) !Solution {
     const n_red_tiles = mem.count(u8, input_str, "\n") + 1;
     const red_tiles = try al.alloc(Tile, n_red_tiles);
     defer al.free(red_tiles);
-    // const areas = try StrictlyLowerTriangularMatrix.initAlloc(al, n_red_tiles);
     var max_area: Solution = 0;
     var i: usize = 0;
     var lines = mem.tokenizeScalar(u8, input_str, '\n');
@@ -44,45 +43,6 @@ fn solve(base_alloc: mem.Allocator, input_str: []const u8) !Solution {
 }
 
 const Tile = struct { x: u64, y: u64 };
-
-// Modified from Day 8
-const StrictlyLowerTriangularMatrix = struct {
-    data: []u64,
-    n: usize,
-
-    pub fn initAlloc(al: mem.Allocator, n: usize) !@This() {
-        const data = try al.alloc(u64, n);
-        return .{ .data = data, .n = n };
-    }
-
-    pub fn deinit(self: @This(), al: mem.Allocator) void {
-        al.free(self.data);
-    }
-
-    pub fn numel(self: @This()) usize {
-        const n = self.n;
-        return (n * (n - 1)) / 2;
-    }
-
-    pub fn at(self: *@This(), row: usize, col: usize) *u64 {
-        const actual_row = @max(row, col);
-        const actual_col = @min(row, col);
-        assert(actual_row >= 1);
-        assert(actual_row > actual_col);
-        assert(actual_row < self.n);
-
-        const idx = (actual_row * (actual_row - 1)) / 2 + actual_col;
-        return &self.data[idx];
-    }
-
-    pub fn unlinearize(self: @This(), linear: usize) struct { row: usize, col: usize } {
-        assert(linear < self.numel());
-        const r = (math.sqrt(8 * linear + 1) + 1) / 2;
-        const base = (r * (r - 1)) / 2;
-        const c = linear - base;
-        return .{ .row = r, .col = c };
-    }
-};
 
 fn debugPrintLn(comptime fmt: []const u8, args: anytype) void {
     std.debug.print(fmt ++ "\n", args);
